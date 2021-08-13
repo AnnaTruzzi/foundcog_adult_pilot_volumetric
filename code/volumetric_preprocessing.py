@@ -20,7 +20,8 @@ count = 1
 for sub in sub_list:
     for task in tasks_list :
         temp_pth = '/home/annatruzzi/foundcog_adult_pilot_volumetric/temp/'
-        s3.download_file(bucket, f'foundcog-adult-pilot-2/deriv-2_topup/fmriprep/{sub}/ses-001/func/{sub}_ses-001_task-{task}_space-MNI152NLin2009cAsym_desc-brain_mask.nii.gz', f'{sub}_ses-001_task-{task}_space-MNI152NLin2009cAsym_desc-brain_mask.nii.gz')
+
+        '''s3.download_file(bucket, f'foundcog-adult-pilot-2/deriv-2_topup/fmriprep/{sub}/ses-001/func/{sub}_ses-001_task-{task}_space-MNI152NLin2009cAsym_desc-brain_mask.nii.gz', f'{sub}_ses-001_task-{task}_space-MNI152NLin2009cAsym_desc-brain_mask.nii.gz')
         s3.download_file(bucket, f'foundcog-adult-pilot-2/deriv-2_topup/fmriprep/{sub}/ses-001/func/{sub}_ses-001_task-{task}_from-T1w_to-scanner_mode-image_xfm.txt', f'{sub}_ses-001_task-{task}_from-T1w_to-scanner_mode-image_xfm.txt')
         os.system(f'mv {sub}_ses-001_task-{task}_space-MNI152NLin2009cAsym_desc-brain_mask.nii.gz ../temp/')
         os.system(f'mv {sub}_ses-001_task-{task}_from-T1w_to-scanner_mode-image_xfm.txt ../temp/')
@@ -83,12 +84,12 @@ for sub in sub_list:
         #res = roistats.run()
         
         #os.system('3dROIstats -mask_f2short -mask /dhcp/rhodri_registration/atlases/schaefer/Parcellations/MNI/Schaefer2018_400Parcels_17Networks_order_FSLMNI152_1mm.nii.gz -nomeanout -numROI 400 -quiet -nzmean /home/annatruzzi/foundcog_adult_pilot_volumetric/temp/sub-02_ses-001_task-resting_run-1_space-MNI152NLin2009cAsym_desc-preproc_bold.nii.gz > /home/annatruzzi/foundcog_adult_pilot_volumetric/temp/sub-02_ses-001_task-resting_run-1_Schaefer400_timecourses.txt')
-        
+        '''
         
         ###################
         # TENTATIVE STEPS #
         ###################
-        '''s3.download_file(bucket, f'foundcog-adult-pilot-2/bids/{sub}/ses-001/func/{sub}_ses-001_task-{task}_bold.nii.gz', f'{sub}_ses-001_task-{task}_bold.nii.gz')
+        s3.download_file(bucket, f'foundcog-adult-pilot-2/bids/{sub}/ses-001/func/{sub}_ses-001_task-{task}_bold.nii.gz', f'{sub}_ses-001_task-{task}_bold.nii.gz')
         s3.download_file(bucket, f'foundcog-adult-pilot-2/bids/{sub}/ses-001/anat/{sub}_ses-001_run-001_T1w.nii.gz', f'{sub}_ses-001_run-001_T1w.nii.gz')
         os.system(f'mv {sub}_ses-001_task-{task}_bold.nii.gz ../temp/')
         os.system(f'mv {sub}_ses-001_run-001_T1w.nii.gz ../temp/')
@@ -98,45 +99,44 @@ for sub in sub_list:
         btr = fsl.BET()
         btr.inputs.in_file = Path(os.path.join(temp_pth, f'{sub}_ses-001_run-001_T1w.nii.gz'))
         btr.inputs.frac = 0.5
+        btr.mask = True
         btr.inputs.out_file = os.path.join(temp_pth, f'{sub}_ses-001_T1w_bet.nii.gz')
-        #res = btr.run()
-        #s3.upload_file(os.path.join(temp_pth, f'{sub}_ses-001_T1w_bet.nii.gz'), bucket, f'foundcog-adult-pilot-2/volumetric_preprocessing/bet/{sub}/{sub}_ses-001_T1w_bet.nii.gz')
+        res = btr.run()
+        s3.upload_file(os.path.join(temp_pth, f'{sub}_ses-001_T1w_bet.nii.gz'), bucket, f'foundcog-adult-pilot-2/volumetric_preprocessing/bet/{sub}/{sub}_ses-001_T1w_bet.nii.gz')
 
         ## Motion correction
         print(f'{sub} - Working on motion correction...')
         mcflt = fsl.MCFLIRT()
         mcflt.inputs.in_file= Path(os.path.join(temp_pth, f'{sub}_ses-001_task-{task}_bold.nii.gz'))
-        mcflt.inputs.cost='mutualinfo'
-        mcflt.inputs.output_type = 'NIFTI_GZ'
         mcflt.inputs.out_file = os.path.join(temp_pth, f'{sub}_ses-001_task-{task}_bold_mcflirt.nii.gz')
         mcflt.inputs.save_plots = True
-        #res = mcflt.run()
-        #s3.upload_file(os.path.join(temp_pth, f'{sub}_ses-001_task-{task}_bold_mcflirt.nii.gz'), bucket, f'foundcog-adult-pilot-2/volumetric_preprocessing/motion-correction/{sub}/{sub}_ses-001_task-{task}_bold_mcflirt.nii.gz')
-        #s3.upload_file(os.path.join(temp_pth, f'{sub}_ses-001_task-{task}_bold_mcflirt.nii.gz.par'), bucket, f'foundcog-adult-pilot-2/volumetric_preprocessing/motion-correction/{sub}/{sub}_ses-001_task-{task}_bold_mcflirt.nii.gz.par')
+        res = mcflt.run()
+        s3.upload_file(os.path.join(temp_pth, f'{sub}_ses-001_task-{task}_bold_mcflirt.nii.gz'), bucket, f'foundcog-adult-pilot-2/volumetric_preprocessing/motion-correction/{sub}/{sub}_ses-001_task-{task}_bold_mcflirt.nii.gz')
+        s3.upload_file(os.path.join(temp_pth, f'{sub}_ses-001_task-{task}_bold_mcflirt.nii.gz.par'), bucket, f'foundcog-adult-pilot-2/volumetric_preprocessing/motion-correction/{sub}/{sub}_ses-001_task-{task}_bold_mcflirt.nii.gz.par')
 
         ## T1-Coregistration
-        print(f'{sub} - Working on registration...')
-        flt = fsl.FLIRT(bins=640, cost_func='mutualinfo')
-        flt.inputs.in_file = os.path.join(temp_pth, f'{sub}_ses-001_T1w_bet.nii.gz')
-        flt.inputs.reference = Path('/dhcp/rhodri_registration/atlases/fsl/MNI152_T1_1mm_brain.nii.gz')
-        flt.inputs.output_type = "NIFTI_GZ"
-        flt.inputs.out_file = os.path.join(temp_pth, f'{sub}_ses-001_T1w_RegisteredToMNI.nii.gz')
-        flt.inputs.out_matrix_file = os.path.join(temp_pth, f'{sub}_ses-001_transform.mat')
-        #res = flt.run()
-
-        print(f'{sub} - Working on functional registration...')
-        flt_func = fsl.FLIRT()
-        flt_func.inputs.in_file = Path(os.path.join(temp_pth, f'{sub}_ses-001_task-{task}_bold_mcflirt.nii.gz'))
-        flt_func.inputs.reference = os.path.join(temp_pth, f'{sub}_ses-001_T1w_RegisteredToMNI.nii.gz')
-        flt_func.inputs.apply_xfm = True
-        flt_func.inputs.in_matrix_file = os.path.join(temp_pth, f'{sub}_ses-001_transform.mat')
-        flt_func.inputs.output_type = "NIFTI_GZ"
-        flt_func.inputs.out_file = os.path.join(temp_pth, f'{sub}_ses-001_task-{task}_bold_RegisteredToMNI.nii.gz')
+        print(f'{sub} - Working on registration - Template to Native...')
+        flt_func = fsl.FNIRT()
+        flt_func.inputs.in_file = Path('/dhcp/rhodri_registration/atlases/fsl/MNI152_T1_1mm_brain.nii.gz')
+        flt_func.inputs.reference = os.path.join(temp_pth, f'{sub}_ses-001_T1w_bet.nii.gz')  ## CHANGE TO BRAIN MASK -- How to get it?
+        flt_func.inputs.out_matrix_file = os.path.join(temp_pth, f'{sub}_ses-001_{task}_MNI_to_Native.mat')
+        flt_func.inputs.out_file = os.path.join(temp_pth, f'{sub}_ses-001_{task}_MNI_to_Native.nii.gz')
         res = flt_func.run()
+
+        print(f'{sub} - Working on registration - Schaefer to Native...')
+        flt = fsl.FNIRT()
+        flt.inputs.in_file = '/dhcp/rhodri_registration/atlases/schaefer/Parcellations/MNI/Schaefer2018_400Parcels_17Networks_order_FSLMNI152_1mm.nii.gz'
+        flt.inputs.reference = os.path.join(temp_pth, f'{sub}_ses-001_T1w_bet.nii.gz')  ## CHANGE TO BRAIN MASK -- How to get it?
+        flt_func.inputs.apply_xfm = True
+        flt.inputs.in_matrix_file = os.path.join(temp_pth, f'{sub}_ses-001_{task}_MNI_to_Native.mat')
+        flt.inputs.out_file = os.path.join(temp_pth, f'{sub}_ses-001_{task}_Schaefer.nii.gz')
+        res = flt.run()
+
         s3.upload_file(os.path.join(temp_pth, f'{sub}_ses-001_task-{task}_bold_RegisteredToMNI.nii.gz'), bucket, f'foundcog-adult-pilot-2/volumetric_preprocessing/t1-coregistration/{sub}/{sub}_ses-001_task-{task}_bold_RegisteredToMNI.nii.gz')
         s3.upload_file(os.path.join(temp_pth, f'{sub}_ses-001_transform.mat'), bucket, f'foundcog-adult-pilot-2/volumetric_preprocessing/t1-coregistration/{sub}/{sub}_ses-001_transform.nii.gz')
         s3.upload_file(os.path.join(temp_pth, f'{sub}_ses-001_T1w_RegisteredToMNI.nii.gz'), bucket, f'foundcog-adult-pilot-2/volumetric_preprocessing/t1-coregistration/{sub}/{sub}_ses-001_T1w_RegisteredToMNI.nii.gz')
-        '''
+
+        
 
         
         #### ANTS registration
