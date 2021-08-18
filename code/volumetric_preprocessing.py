@@ -13,7 +13,7 @@ import re
 s3=boto3.client('s3')
 bucket='foundcog-adult-pilot'
 #sub_list = ['sub-02','sub-03','sub-04','sub-05','sub-06','sub-07','sub-08','sub-09','sub-10','sub-11','sub-12','sub-#13','sub-14']
-sub_list = ['sub-15','sub-16', 'sub-17', 'sub-18']
+sub_list = ['sub-18']
 
 tasks_list = ['resting_run-001', 'video_run-001', 'video_run-002']
 count = 1
@@ -34,7 +34,7 @@ for sub in sub_list:
         ## Skull stripping 
         print(f'{sub} - Working on bet...')
         btr = fsl.BET()
-        btr.inputs.in_file = Path(os.path.join(temp_pth, f'{sub}_ses-001_run-001_T1w.nii.gz'))
+        btr.inputs.in_file = os.path.join(temp_pth, f'{sub}_ses-001_run-001_T1w.nii.gz')
         btr.inputs.frac = 0.5
         btr.mask = True
         btr.inputs.out_file = os.path.join(temp_pth, f'{sub}_ses-001_T1w_bet.nii.gz')
